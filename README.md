@@ -1,86 +1,100 @@
-# AI CV Routing Webhook (HW1)
+# AI Application Intake Webhook (HW2)
 
-A beginner-friendly end-to-end automation project that accepts a candidate job application via webhook, stores it in Google Sheets, and evaluates the CV using Google Gemini AI.
+This project is an HW2 upgrade of the existing HW1 CV intake workflow.  
+It keeps the same webhook-based application theme and now focuses on the required HW2 flow:
 
-## Mappings to HW1 Requirements
-This project exactly satisfies the defined requirements in the following sequence:
-1. **Trigger:** `app.post('/webhook/apply', ...)` acts as an HTTP POST endpoint.
-2. **Logic Step:** `processApplicationData()` function cleans strings, normalize emails, and injects timestamps.
-3. **Integration Step:** `appendToSheet()` connects to the Google Sheets API and stores the candidate's raw data directly to a row.
-4. **AI Step:** `analyzeApplication()` passes the CV text to Gemini 1.5 Flash to generate a summary, a recommended department, and a fit level score.
+**HTTP POST ({name, email, message}) -> Antigravity Connector -> Google Sheets**
 
----
+## HW2 Workflow
+
+1. Receive a `POST` request at `/webhook/apply`.
+2. Accept only these required fields: `name`, `email`, `message`.
+   - The payload must contain **exactly** these 3 keys (no extra keys).
+3. Apply minimal normalization:
+   - trim text fields
+   - lowercase email
+   - add ISO timestamp
+4. Send raw normalized data to Google Sheets using the connector module at `connectors/antigravitySheetsConnector.js`.
+5. Append one row per successful request.
 
 ## Prerequisites
 
-1. **Node.js** (v18 or higher recommended)
-2. **Google Cloud Account** (To create Service Account Credentials for Sheets)
-3. **Google Gemini API Key** (From Google AI Studio)
+1. Node.js (v18+ recommended)
+2. Google Cloud service account with Sheets API enabled
+3. `credentials.json` in project root
+4. Target Google Sheet shared with service account `client_email`
 
-## Setup Instructions
+## Setup
 
-### 1. Install Dependencies
-Run the following inside the project folder:
+### 1) Install
 ```bash
 npm install
 ```
 
-### 2. Configure Environment Variables
-Copy the provided `.env.example` into a new `.env` file:
+### 2) Environment variables
 ```bash
 cp .env.example .env
 ```
-Inside `.env`, populate the three variables:
-- `PORT` = (Keep as 3000 or pick another port)
-- `GOOGLE_SHEET_ID` = (Copy this from your Google Sheet's URL)
-- `GEMINI_API_KEY` = (Your Gemini API Key)
 
-### 3. Connect Google Sheets (Authentication)
-1. Go to the [Google Cloud Console](https://console.cloud.google.com/).
-2. Enable the **Google Sheets API**.
-3. Create a **Service Account** and download its JSON key file.
-4. Rename the downloaded file to `credentials.json` and place it in the root of this project folder. *(Note: This file is ignored by git to keep your secrets safe).*
-5. Open your `credentials.json` and copy the `client_email`.
-6. Create a blank Google Sheet, and add these column headers to row 1:
-   `timestamp` | `name` | `email` | `applied_role` | `cv_text` | `storage_status`
-7. Click the **Share** button on your Google Sheet and invite the `client_email` Service Account as an **Editor**.
+Set:
+- `PORT=3000`
+- `GOOGLE_SHEET_ID=your_google_sheet_id_here`
 
-## How to Run
+### 3) Google Sheet columns
+Create these headers in row 1:
 
-Start the server using:
+`timestamp` | `name` | `email` | `message` | `storage_status`
+
+## Run
+
 ```bash
 npm start
 ```
-The console will report `Server is running!` and display the webhook endpoint.
 
-## How to Test it Live
+Endpoint:
+- `POST http://localhost:3000/webhook/apply`
 
-To test the application, open a new terminal window and send a webhook request using `curl`. 
-A sample payload is available in `sample-payload.json`.
+## Test
+
+Use the provided `sample-payload.json`:
 
 ```bash
 curl -X POST http://localhost:3000/webhook/apply \
--H "Content-Type: application/json" \
--d @sample-payload.json
+  -H "Content-Type: application/json" \
+  -d @sample-payload.json
 ```
 
-### Expected JSON Response
-
+### Expected success response
 ```json
 {
   "success": true,
   "stored_in_sheets": true,
-  "ai_summary": "An experienced data professional with 4 years of background in Python, SQL and Tableau.",
-  "recommended_department": "Data/AI",
-  "fit_level": "High"
+  "message": "Application message received and stored successfully."
 }
 ```
 
-## Live Demo Walkthrough
-When presenting live:
-1. Show your terminal with `node server.js` running.
-2. Show your empty Google Sheet.
-3. Open a second terminal window and run the `curl` command.
-4. Let the audience watch the terminal output that represents the API request returning perfectly formatted JSON with AI evaluations.
-5. Immediately switch to the Google Sheet tab and show that the raw data and timestamp have appeared.
-6. Briefly walk through the `server.js` file to show how the "Sequence" of the homework is satisfied.
+## Error responses
+
+### Missing required fields (`400`)
+```json
+{
+  "success": false,
+  "error": "Missing required fields: name, email, message"
+}
+```
+
+### Invalid payload contract (`400`)
+```json
+{
+  "success": false,
+  "error": "Payload must contain exactly these fields: name, email, message"
+}
+```
+
+### Storage failure (`500`)
+```json
+{
+  "success": false,
+  "error": "Failed to store application in Google Sheets"
+}
+```
