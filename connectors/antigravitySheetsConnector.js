@@ -32,7 +32,7 @@ export async function appendApplicationRow({
 
   const result = await sheets.spreadsheets.values.append({
     spreadsheetId,
-    range: `${firstSheetTitle}!A:E`,
+    range: `${firstSheetTitle}!A:L`,
     valueInputOption: 'RAW',
     insertDataOption: 'INSERT_ROWS',
     requestBody: { values: [rowData] }

@@ -1,7 +1,7 @@
 {
-  "name": "ai-cv-routing-hw1",
+  "name": "ai-cv-routing-hw3",
   "version": "1.0.0",
-  "description": "HW2: POST webhook pipeline storing {name,email,message} into Google Sheets",
+  "description": "HW3: intelligent recruitment workflow with validation, AI analysis, and Google Sheets persistence",
   "main": "server.js",
   "type": "module",
   "scripts": {
